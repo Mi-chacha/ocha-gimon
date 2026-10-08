@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>お茶の問いノート</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
+<style>
+:root{--bg:#f1f4f0;--card:#fff;--ink:#1d2a23;--sub:#66746b;--line:#d9e0d8;--ac:#2f5d46;--acs:#e0ebe3;--warn:#a5522d;--warns:#f6e5dc;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a16;--card:#1d2621;--ink:#e6ede8;--sub:#93a399;--line:#2e3a33;--ac:#8fc7a5;--acs:#25362c;--warn:#e29a73;--warns:#3a2a22}}
+:root[data-theme="dark"]{--bg:#141a16;--card:#1d2621;--ink:#e6ede8;--sub:#93a399;--line:#2e3a33;--ac:#8fc7a5;--acs:#25362c;--warn:#e29a73;--warns:#3a2a22}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "Zen Kaku Gothic New",system-ui,sans-serif;padding-bottom:150px}
+h1,h2{font-family:"Shippori Mincho",serif;margin:0;line-height:1.4}
+main{max-width:640px;margin:0 auto;padding:14px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+header h1{font-size:22px;flex:1}header h1:first-child{flex:1 1 100%}
+button,select,input,textarea{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;padding:0}
+.ib{padding:6px 10px;border:1px solid var(--line);border-radius:18px;background:var(--card);font-size:13px}
+.ib.on{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+input,textarea,select{width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
+textarea{resize:vertical;min-height:70px}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.q{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.q b{font-family:"Shippori Mincho",serif;font-size:16px;display:block;margin-bottom:4px}
+.meta{color:var(--sub);font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.st{padding:1px 9px;border-radius:10px;background:var(--acs);color:var(--ac);font-size:12px}
+.st.hot{background:var(--warns);color:var(--warn)}
+.tag{font-size:12px;color:var(--sub);border:1px solid var(--line);border-radius:10px;padding:0 8px}
+.tag.on{background:var(--acs);color:var(--ac);border-color:var(--ac)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.sec{margin:20px 0 6px;font-size:16px}
+.lbl{color:var(--sub);font-size:12.5px;margin:10px 0 3px}
+.cmp{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+.a{flex:0 0 82%;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.a.one{flex-basis:100%}
+.a p{margin:6px 0;white-space:pre-wrap}
+.mine{background:var(--acs);border-radius:12px;padding:12px;margin-top:8px}
+.mine textarea{background:var(--card)}
+.add{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px))}
+.add div{max-width:640px;margin:0 auto;display:flex;gap:8px}
+.go{background:var(--ac);color:var(--bg);border-radius:10px;padding:0 16px;white-space:nowrap}
+.link{color:var(--ac);text-decoration:underline;font-size:13px}
+.tt{font-size:20px;width:100%;border:0;background:none;padding:4px 0;font-family:"Shippori Mincho",serif}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);width:min(92vw,520px);padding:16px}
+dialog::backdrop{background:#0006}
+.empty{color:var(--sub);text-align:center;padding:30px 10px}
+mark{background:var(--warns);color:inherit}
+</style></head><body><main id="app"></main>
+<div class="add" id="addbar"><div><input id="quick" placeholder="お茶の疑問をひとこと" enterkeyhint="done"><button class="go" id="quickgo">登録</button></div></div>
+<dialog id="dlg"></dialog>
+<script>
+const ST=["気になる","未回答","回答あり","いったん納得","まだ謎","もっと聞きたい"],HOT=["まだ謎","もっと聞きたい"];
+const TAGS0=["品種","栽培","製法","香り","味","成分","歴史","文化","流通","商品","地域","農家","茶道","日本茶","海外茶"];
+const SRC=["直接聞いた","書籍","雑誌","インターネット記事","その他"];
+let D={qs:[],tags:TAGS0.slice()};
+try{const s=localStorage.getItem("tea-q-v1");if(s)D=JSON.parse(s)}catch(e){}
+const EPK="tea-q-endpoint",getEP=()=>{try{return localStorage.getItem(EPK)||""}catch(e){return ""}},setEP=u=>{try{localStorage.setItem(EPK,u)}catch(e){}};
+const keep=()=>{try{localStorage.setItem("tea-q-v1",JSON.stringify(D))}catch(e){}};
+let tm;const save=()=>{keep();if(getEP()){clearTimeout(tm);tm=setTimeout(()=>pushSheet(true),1500)}};
+function fixup(){if(!Array.isArray(D.tags))D.tags=TAGS0.slice();if(!D.tags.includes("商品"))D.tags.push("商品");D.tags=D.tags.filter(t=>!["和紅茶","中国茶","台湾茶"].includes(t));if(!D.tags.includes("海外茶"))D.tags.push("海外茶");(D.qs||(D.qs=[])).forEach(q=>{q.answers=q.answers||[];q.tags=[...new Set((q.tags||[]).map(t=>t=="中国茶"||t=="台湾茶"?"海外茶":t).filter(t=>t!="和紅茶"))];q.answers.forEach(a=>{if(a.src=="教書")a.src="書籍"})})}
+const msg=t=>{const e=document.querySelector("#sm");if(e)e.textContent=t};
+async function fetchRemote(){const ep=getEP();if(!ep)return null;const r=await fetch(ep);if(!r.ok)throw new Error("HTTP "+r.status);const t=await r.text();let d;try{d=JSON.parse(t)}catch(e){throw new Error("JSONではありません: "+t.slice(0,80))}if(!Array.isArray(d))throw new Error("想定外の形式のデータでした");return d}
+async function pushSheet(silent){if(!getEP())return;try{await fetch(getEP(),{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(D.qs)});if(!silent)msg("スプレッドシートに送信しました")}catch(e){if(!silent)msg("送信に失敗しました(オフラインの可能性があります)")}}
+async function refreshRC(){const el=$("#rc");if(!el)return;try{const r=await fetchRemote();if($("#rc"))el.textContent=r.length+"件"}catch(e){if($("#rc"))el.textContent="取得できませんでした("+e.message+")"}}
+async function doPull(){let r;try{r=await fetchRemote()}catch(e){msg("取得できませんでした:"+e.message);return}
+ if(!confirm(`この端末の質問(${D.qs.length}件)を、スプレッドシートの質問(${r.length}件)で置き換えます。よろしいですか?`))return;
+ D.qs=r;r.forEach(q=>(q.tags||[]).forEach(t=>{if(!D.tags.includes(t))D.tags.push(t)}));fixup();keep();go("home")}
+async function doPush(){let n="確認できませんでした";try{n=(await fetchRemote()).length+"件"}catch(e){}
+ if(!confirm(`スプレッドシートの質問(${n})を、この端末の質問(${D.qs.length}件)で置き換えます。よろしいですか?`))return;
+ await pushSheet(false);refreshRC()}
+function setupEP(){dlg(`<h2 style="font-size:17px">同期するURL</h2><div class="meta">Google Apps ScriptのウェブアプリURLを貼り付けてください。</div><input id="su" value="${E(getEP())}"><div class="row"><button class="go" style="padding:8px 16px" onclick="const v=$('#su').value.trim();if(v){setEP(v);closeD();render()}">設定する</button><button class="ib" onclick="closeD()">やめる</button></div>`)}
+function clearEP(){if(confirm("同期を解除しますか?(スプレッドシート上のデータは消えません)")){setEP("");render()}}
+function syncPage(){const ep=getEP();return `<header><button class="ib" onclick="go('home')">戻る</button><h1 style="font-size:19px">スプレッドシートと同期</h1></header>`+(ep?`<div class="meta" style="word-break:break-all">設定中のURL:${E(ep)}</div><div class="lbl">この端末の質問</div>${D.qs.length}件<div class="lbl">スプレッドシートの質問</div><span id="rc">確認中…</span><div class="row"><button class="ib" onclick="doPull()">スプレッドシート→この端末に取得</button></div><div class="meta">この端末の内容が、スプレッドシートの内容で置き換わります。</div><div class="row"><button class="ib" onclick="doPush()">この端末→スプレッドシートに送信</button></div><div class="meta">スプレッドシートの内容が、この端末の内容で置き換わります。</div><div class="row"><button class="ib" onclick="setupEP()">URLを変更する</button><button class="ib" onclick="clearEP()">同期を解除する</button></div>`:`<div class="meta">Google Apps ScriptのウェブアプリURLを設定すると、質問と回答をスプレッドシートと同期できます。</div><div class="row"><button class="go" style="padding:8px 16px" onclick="setupEP()">URLを設定する</button></div>`)+`<div class="meta" id="sm" style="margin-top:10px"></div>`}
+let V={page:"home",id:null,q:"",sort:"new",st:"",tag:""};
+const $=s=>document.querySelector(s),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const E=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dt=iso=>{const d=new Date(iso);return isNaN(d)?"":`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`};
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const get=id=>D.qs.find(q=>q.id==id);
+const go=(p,id)=>{V.page=p;V.id=id||null;render();scrollTo(0,0)};
+function hl(t,k){t=E(t);if(!k)return t;const r=E(k).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");return t.replace(new RegExp(r,"gi"),m=>`<mark>${m}</mark>`)}
+function newQ(title,extra={}){const q={id:uid(),title,body:"",tags:[],created:new Date().toISOString(),hyp:"",status:"気になる",answers:[],mine:"",parent:null,...extra};D.qs.unshift(q);save();return q}
+function card(q,k){
+ let hit="";
+ if(k){const l=k.toLowerCase();const a=q.answers.find(a=>(a.text+a.who+a.role+a.note).toLowerCase().includes(l));
+  if(a)hit=`<div class="meta" style="margin-top:4px">回答:${hl(a.text.slice(0,60),k)}(${hl(a.who,k)})</div>`;
+  else if((q.mine||"").toLowerCase().includes(l))hit=`<div class="meta" style="margin-top:4px">自分の理解:${hl(q.mine.slice(0,60),k)}</div>`}
+ return `<button class="q" onclick="go('detail','${q.id}')"><b>${hl(q.title,k)}</b><div class="meta"><span class="st ${HOT.includes(q.status)?"hot":""}">${q.status}</span><span>${dt(q.created)}</span><span>回答${q.answers.length}</span>${q.tags.map(t=>`<span class="tag">${hl(t,k)}</span>`).join("")}</div>${hit}</button>`}
+function match(q,k){k=k.toLowerCase();return [q.title,q.body,q.mine,q.hyp,...q.tags,...q.answers.flatMap(a=>[a.text,a.who,a.role,a.note])].join("\n").toLowerCase().includes(k)}
+function home(){
+ let l=D.qs.slice();const k=V.q.trim();
+ if(k)l=l.filter(q=>match(q,k));
+ if(V.st)l=l.filter(q=>q.status==V.st);
+ if(V.tag)l=l.filter(q=>q.tags.includes(V.tag));
+ if(V.sort=="unans")l=l.filter(q=>!q.answers.length);
+ if(V.sort=="old")l.reverse();
+ if(V.sort=="most")l.sort((a,b)=>b.answers.length-a.answers.length);
+ return `<header><h1>お茶の問いノート</h1><button class="ib" onclick="go('ask')">聞きたいこと</button><button class="ib" onclick="go('sync')">同期</button><button class="ib" onclick="backup()">控え</button></header>
+ <input type="search" id="sq" placeholder="質問・回答・回答者・タグを検索" value="${E(V.q)}" oninput="V.q=this.value;list()">
+ <div class="row"><select onchange="V.sort=this.value;list()" style="flex:1">${[["new","新しい順"],["old","古い順"],["unans","未回答のみ"],["most","回答が多い順"]].map(([v,n])=>`<option value="${v}" ${V.sort==v?"selected":""}>${n}</option>`).join("")}</select>
+ <select onchange="V.st=this.value;list()" style="flex:1"><option value="">ステータス:すべて</option>${ST.map(s=>`<option ${V.st==s?"selected":""}>${s}</option>`).join("")}</select>
+ <select onchange="V.tag=this.value;list()" style="flex:1"><option value="">タグ:すべて</option>${D.tags.map(s=>`<option ${V.tag==s?"selected":""}>${E(s)}</option>`).join("")}</select></div>
+ <div id="lst"></div>`}
+function list(){const el=$("#lst");if(!el)return;let l=D.qs.slice();const k=V.q.trim();
+ if(k)l=l.filter(q=>match(q,k));if(V.st)l=l.filter(q=>q.status==V.st);if(V.tag)l=l.filter(q=>q.tags.includes(V.tag));
+ if(V.sort=="unans")l=l.filter(q=>!q.answers.length);if(V.sort=="old")l.reverse();if(V.sort=="most")l.sort((a,b)=>b.answers.length-a.answers.length);
+ el.innerHTML=l.length?l.map(q=>card(q,k)).join(""):`<div class="empty">${D.qs.length?"該当する質問がありません":"下の入力欄に、気になったことをひとこと書いてみましょう"}</div>`}
+function ask(){
+ const l=D.qs.filter(q=>q.status=="未回答"||q.status=="もっと聞きたい"||(q.status=="気になる"&&!q.answers.length));
+ return `<header><button class="ib" onclick="go('home')">戻る</button><h1 style="font-size:19px">次に会ったら聞きたいこと</h1></header>
+ <div class="meta" style="margin-bottom:10px">未回答・もっと聞きたい・まだ回答のない「気になる」</div>
+ ${l.length?l.map(q=>card(q)).join(""):`<div class="empty">聞きたいことはありません</div>`}`}
+function detail(){
+ const q=get(V.id);if(!q)return home();
+ const par=q.parent&&get(q.parent),kids=D.qs.filter(x=>x.parent==q.id);
+ return `<header><button class="ib" onclick="go('home')">戻る</button><span style="flex:1"></span><button class="ib" onclick="delQ()">削除</button></header>
+ ${par?`<div class="meta">元の質問:<button class="link" onclick="go('detail','${par.id}')">${E(par.title)}</button></div>`:""}
+ <input class="tt" value="${E(q.title)}" onchange="upd('title',this.value)">
+ <div class="meta">${dt(q.created)}に登録</div>
+ <div class="lbl">ステータス</div>
+ <div class="row">${ST.map(s=>`<button class="ib ${q.status==s?"on":""}" onclick="upd('status','${s}',1)">${s}</button>`).join("")}</div>
+ <div class="lbl">タグ</div>
+ <div class="row">${D.tags.map((t,i)=>`<button class="tag ${q.tags.includes(t)?"on":""}" onclick="tog(${i})">${E(t)}</button>`).join("")}<button class="tag" onclick="newTag()">+ 追加</button></div>
+ <div class="lbl">質問の詳しい内容(任意)</div><textarea onchange="upd('body',this.value)">${E(q.body)}</textarea>
+ <div class="lbl">自分の仮説・今の考え(任意)</div><textarea onchange="upd('hyp',this.value)">${E(q.hyp)}</textarea>
+ <h2 class="sec">回答(${q.answers.length})</h2>
+ ${q.answers.length?`<div class="cmp">${q.answers.map((a,i)=>`<div class="a ${q.answers.length==1?"one":""}"><b>${E(a.who||"名前なし")}</b> <span class="meta">${E(a.role)}</span><div class="meta">${dt(a.date)} / ${E(a.src)}</div><p>${E(a.text)}</p>${a.note?`<div class="meta">メモ:${E(a.note)}</div>`:""}<div class="row"><button class="link" onclick="addA(${i})">編集</button><button class="link" onclick="derive('${q.id}',${i})">ここから新しい質問</button><button class="link" onclick="delA(${i})">削除</button></div></div>`).join("")}</div>`:`<div class="meta">まだ回答がありません。聞いたら追加しましょう。</div>`}
+ <div class="row"><button class="go" style="padding:8px 16px" onclick="addA()">回答を追加</button></div>
+ <h2 class="sec">自分の理解・まとめ</h2>
+ <div class="mine"><textarea placeholder="回答を並べてみて、今どう理解している?" onchange="upd('mine',this.value)">${E(q.mine)}</textarea></div>
+ <div class="row"><button class="ib" onclick="derive('${q.id}')">この質問から新しい質問を作る</button></div>
+ ${kids.length?`<h2 class="sec">ここから生まれた質問</h2>${kids.map(k=>card(k)).join("")}`:""}`}
+function render(){$("#app").innerHTML=V.page=="sync"?syncPage():V.page=="ask"?ask():V.page=="detail"?detail():home();$("#addbar").style.display=["detail","sync"].includes(V.page)?"none":"";if(V.page=="sync")refreshRC();if(V.page=="home")list()}
+function upd(f,v,re){const q=get(V.id);q[f]=f=="title"?(v.trim()||q.title):v;save();if(re)render()}
+function tog(i){const q=get(V.id),t=D.tags[i],j=q.tags.indexOf(t);j<0?q.tags.push(t):q.tags.splice(j,1);save();render()}
+function dlg(h){const d=$("#dlg");d.innerHTML=h;d.showModal()}
+const closeD=()=>$("#dlg").close();
+function newTag(){dlg(`<div class="lbl">新しいタグ</div><input id="nt"><div class="row"><button class="go" style="padding:8px 16px" onclick="const v=$('#nt').value.trim();if(v){if(!D.tags.includes(v))D.tags.push(v);const q=get(V.id);if(!q.tags.includes(v))q.tags.push(v);save()}closeD();render()">追加</button><button class="ib" onclick="closeD()">やめる</button></div>`);$("#nt").focus()}
+function addA(i){const q=get(V.id),a=i!=null?q.answers[i]:{date:today(),src:SRC[0]},o=SRC.includes(a.src)?SRC:[...SRC,a.src];
+ dlg(`<h2 style="font-size:17px">${i!=null?"回答を編集":"回答を追加"}</h2><div class="lbl">回答内容</div><textarea id="at">${E(a.text)}</textarea><div class="lbl">回答者名</div><input id="aw" value="${E(a.who)}"><div class="lbl">職種(農家、製茶師、茶商など)</div><input id="ar" value="${E(a.role)}"><div class="lbl">聞いた日</div><input type="date" id="ad" value="${E(a.date)}"><div class="lbl">出典・参考</div><select id="as">${o.map(s=>`<option ${s==a.src?"selected":""}>${E(s)}</option>`).join("")}</select><div class="lbl">メモ(任意)</div><input id="an" value="${E(a.note)}"><div class="row"><button class="go" style="padding:8px 16px" onclick="saveA(${i==null?"null":i})">保存</button><button class="ib" onclick="closeD()">やめる</button></div>`);$("#at").focus()}
+function saveA(i){const t=$("#at").value.trim();if(!t)return;const q=get(V.id),a={text:t,who:$("#aw").value.trim(),role:$("#ar").value.trim(),date:$("#ad").value,src:$("#as").value,note:$("#an").value.trim()};
+ if(i!=null)q.answers[i]=a;else{q.answers.push(a);if(q.status=="気になる"||q.status=="未回答")q.status="回答あり"}save();closeD();render()}
+function delA(i){if(confirm("この回答を削除しますか?")){get(V.id).answers.splice(i,1);save();render()}}
+function delQ(){if(confirm("この質問と回答をすべて削除しますか?")){D.qs=D.qs.filter(q=>q.id!=V.id);D.qs.forEach(q=>{if(q.parent==V.id)q.parent=null});save();go("home")}}
+function derive(pid,ai){const q=get(pid),a=ai!=null?q.answers[ai]:null;
+ dlg(`<h2 style="font-size:17px">新しい質問</h2>${a?`<div class="meta">${E(a.who)}さんの回答:${E(a.text.slice(0,80))}</div>`:`<div class="meta">元の質問:${E(q.title)}</div>`}<div class="lbl">質問タイトル</div><input id="dn"><div class="row"><button class="go" style="padding:8px 16px" onclick="const v=$('#dn').value.trim();if(v){const n=newQ(v,{parent:'${pid}',tags:get('${pid}').tags.slice()});closeD();go('detail',n.id)}">作成</button><button class="ib" onclick="closeD()">やめる</button></div>`);$("#dn").focus()}
+function backup(){dlg(`<h2 style="font-size:17px">バックアップ</h2><div class="meta">下の文字列を保存しておくと、あとで貼り付けて復元できます。</div><textarea id="bk" style="min-height:160px">${E(JSON.stringify(D))}</textarea><div class="row"><button class="go" style="padding:8px 16px" onclick="try{const d=JSON.parse($('#bk').value);if(Array.isArray(d.qs)&&confirm('いまのデータを置き換えますか?')){D=d;save();closeD();go('home')}}catch(e){alert('読み込めませんでした')}">貼り付けた内容で復元</button><button class="ib" onclick="closeD()">閉じる</button></div>`)}
+function quick(){const i=$("#quick"),v=i.value.trim();if(!v)return;i.value="";newQ(v);list()}
+$("#quickgo").onclick=quick;$("#quick").addEventListener("keydown",e=>{if(e.key=="Enter"&&!e.isComposing)quick()});
+fixup();render();
+</script></body></html>
