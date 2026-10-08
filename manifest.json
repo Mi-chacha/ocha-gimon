@@ -1,0 +1,20 @@
+{
+ "name": "お茶疑問ノート",
+ "short_name": "お茶疑問ノート",
+ "start_url": "./",
+ "display": "standalone",
+ "background_color": "#2F5D46",
+ "theme_color": "#2F5D46",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  }
+ ]
+}
