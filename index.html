@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>お茶疑問ノート</title>
 <meta name="theme-color" content="#2F5D46">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,13 +14,13 @@
 :root{--bg:#f1f4f0;--card:#fff;--ink:#1d2a23;--sub:#66746b;--line:#d9e0d8;--ac:#2f5d46;--acs:#e0ebe3;--warn:#a5522d;--warns:#f6e5dc;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a16;--card:#1d2621;--ink:#e6ede8;--sub:#93a399;--line:#2e3a33;--ac:#8fc7a5;--acs:#25362c;--warn:#e29a73;--warns:#3a2a22}}
 :root[data-theme="dark"]{--bg:#141a16;--card:#1d2621;--ink:#e6ede8;--sub:#93a399;--line:#2e3a33;--ac:#8fc7a5;--acs:#25362c;--warn:#e29a73;--warns:#3a2a22}
-*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}html,body{overflow-x:hidden;max-width:100%;overflow-wrap:anywhere}html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "Zen Kaku Gothic New",system-ui,sans-serif;padding-bottom:150px}
 h1,h2{font-family:"Shippori Mincho",serif;margin:0;line-height:1.4}
 main{max-width:640px;margin:0 auto;padding:14px}
 header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
 header h1{font-size:22px;flex:1}header h1:first-child{flex:1 1 100%}
-button,select,input,textarea{font:inherit;color:inherit}
+button,select,input,textarea{font:inherit;color:inherit}input,textarea,select{font-size:16px}
 button{background:none;border:0;cursor:pointer;padding:0}
 .ib{padding:6px 10px;border:1px solid var(--line);border-radius:18px;background:var(--card);font-size:13px}
 .ib.on{background:var(--ac);color:var(--bg);border-color:var(--ac)}
@@ -47,7 +47,7 @@ textarea{resize:vertical;min-height:70px}
 .add div{max-width:640px;margin:0 auto;display:flex;gap:8px}
 .go{background:var(--ac);color:var(--bg);border-radius:10px;padding:0 16px;white-space:nowrap}
 .link{color:var(--ac);text-decoration:underline;font-size:13px}
-.tt{font-size:20px;width:100%;border:0;background:none;padding:4px 0;font-family:"Shippori Mincho",serif}
+.tt{display:block;font-size:20px;line-height:1.5;width:100%;min-height:0;border:0;background:none;padding:4px 0;resize:none;overflow:hidden;font-family:"Shippori Mincho",serif}
 dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);width:min(92vw,520px);padding:16px}
 dialog::backdrop{background:#0006}
 .empty{color:var(--sub);text-align:center;padding:30px 10px}
@@ -122,7 +122,7 @@ function detail(){
  const par=q.parent&&get(q.parent),kids=D.qs.filter(x=>x.parent==q.id);
  return `<header><button class="ib" onclick="go('home')">戻る</button><span style="flex:1"></span><button class="ib" onclick="delQ()">削除</button></header>
  ${par?`<div class="meta">元の質問:<button class="link" onclick="go('detail','${par.id}')">${E(par.title)}</button></div>`:""}
- <input class="tt" value="${E(q.title)}" onchange="upd('title',this.value)">
+ <textarea class="tt" rows="1" oninput="grow(this)" onkeydown="if(event.key=='Enter'&&!event.isComposing){event.preventDefault();this.blur()}" onchange="upd('title',this.value)">${E(q.title)}</textarea>
  <div class="meta">${dt(q.created)}に登録</div>
  <div class="lbl">ステータス</div>
  <div class="row">${ST.map(s=>`<button class="ib ${q.status==s?"on":""}" onclick="upd('status','${s}',1)">${s}</button>`).join("")}</div>
@@ -137,7 +137,8 @@ function detail(){
  <div class="mine"><textarea placeholder="回答を並べてみて、今どう理解している?" onchange="upd('mine',this.value)">${E(q.mine)}</textarea></div>
  <div class="row"><button class="ib" onclick="derive('${q.id}')">この質問から新しい質問を作る</button></div>
  ${kids.length?`<h2 class="sec">ここから生まれた質問</h2>${kids.map(k=>card(k)).join("")}`:""}`}
-function render(){$("#app").innerHTML=V.page=="sync"?syncPage():V.page=="ask"?ask():V.page=="detail"?detail():home();$("#addbar").style.display=["detail","sync"].includes(V.page)?"none":"";if(V.page=="sync")refreshRC();if(V.page=="home")list()}
+function grow(el){el.style.height="auto";el.style.height=el.scrollHeight+"px"}
+function render(){$("#app").innerHTML=V.page=="sync"?syncPage():V.page=="ask"?ask():V.page=="detail"?detail():home();$("#addbar").style.display=["detail","sync"].includes(V.page)?"none":"";if(V.page=="sync")refreshRC();document.querySelectorAll("textarea.tt").forEach(grow);if(V.page=="home")list()}
 function upd(f,v,re){const q=get(V.id);q[f]=f=="title"?(v.trim()||q.title):v;save();if(re)render()}
 function tog(i){const q=get(V.id),t=D.tags[i],j=q.tags.indexOf(t);j<0?q.tags.push(t):q.tags.splice(j,1);save();render()}
 function dlg(h){const d=$("#dlg");d.innerHTML=h;d.showModal()}
