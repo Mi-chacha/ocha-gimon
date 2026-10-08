@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>お茶の問いノート</title>
+<title>お茶疑問ノート</title>
+<meta name="theme-color" content="#2F5D46">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="お茶疑問ノート">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
 <style>
 :root{--bg:#f1f4f0;--card:#fff;--ink:#1d2a23;--sub:#66746b;--line:#d9e0d8;--ac:#2f5d46;--acs:#e0ebe3;--warn:#a5522d;--warns:#f6e5dc;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -95,7 +102,7 @@ function home(){
  if(V.sort=="unans")l=l.filter(q=>!q.answers.length);
  if(V.sort=="old")l.reverse();
  if(V.sort=="most")l.sort((a,b)=>b.answers.length-a.answers.length);
- return `<header><h1>お茶の問いノート</h1><button class="ib" onclick="go('ask')">聞きたいこと</button><button class="ib" onclick="go('sync')">同期</button><button class="ib" onclick="backup()">控え</button></header>
+ return `<header><h1>お茶疑問ノート</h1><button class="ib" onclick="go('ask')">聞きたいこと</button><button class="ib" onclick="go('sync')">同期</button><button class="ib" onclick="backup()">控え</button></header>
  <input type="search" id="sq" placeholder="質問・回答・回答者・タグを検索" value="${E(V.q)}" oninput="V.q=this.value;list()">
  <div class="row"><select onchange="V.sort=this.value;list()" style="flex:1">${[["new","新しい順"],["old","古い順"],["unans","未回答のみ"],["most","回答が多い順"]].map(([v,n])=>`<option value="${v}" ${V.sort==v?"selected":""}>${n}</option>`).join("")}</select>
  <select onchange="V.st=this.value;list()" style="flex:1"><option value="">ステータス:すべて</option>${ST.map(s=>`<option ${V.st==s?"selected":""}>${s}</option>`).join("")}</select>
