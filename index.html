@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="ja"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://script.google.com https://script.googleusercontent.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>お茶疑問ノート</title>
 <meta name="theme-color" content="#2F5D46">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="お茶疑問ノート">
-<link rel="apple-touch-icon" href="IMG_4165.png">
-<link rel="icon" type="image/png" href="IMG_4166.png">
-<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="IMG_4165.png?v=2">
+<link rel="icon" type="image/png" href="IMG_4166.png?v=2">
+<link rel="manifest" href="manifest.json?v=2">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
 <style>
 :root{--bg:#f1f4f0;--card:#fff;--ink:#1d2a23;--sub:#66746b;--line:#d9e0d8;--ac:#2f5d46;--acs:#e0ebe3;--warn:#a5522d;--warns:#f6e5dc;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -62,22 +64,27 @@ const SRC=["直接聞いた","書籍","雑誌","インターネット記事","�
 let D={qs:[],tags:TAGS0.slice()};
 try{const s=localStorage.getItem("tea-q-v1");if(s)D=JSON.parse(s)}catch(e){}
 const EPK="tea-q-endpoint",getEP=()=>{try{return localStorage.getItem(EPK)||""}catch(e){return ""}},setEP=u=>{try{localStorage.setItem(EPK,u)}catch(e){}};
+const TKK="tea-q-token",getTok=()=>{try{return localStorage.getItem(TKK)||""}catch(e){return ""}},setTok=u=>{try{localStorage.setItem(TKK,u)}catch(e){}},synced=()=>!!(getEP()&&getTok());
+function clean(a){const S=(v,n)=>String(v==null?"":v).slice(0,n),ID=/^[A-Za-z0-9_-]{1,40}$/;
+ return a.filter(q=>q&&typeof q=="object").slice(0,5000).map(q=>({id:ID.test(q.id)?q.id:uid(),title:S(q.title,300)||"(無題)",body:S(q.body,5000),hyp:S(q.hyp,5000),tags:(Array.isArray(q.tags)?q.tags:[]).slice(0,30).map(t=>S(t,40)),created:S(q.created,40),status:ST.includes(q.status)?q.status:"気になる",mine:S(q.mine,10000),parent:q.parent&&ID.test(q.parent)?q.parent:null,answers:(Array.isArray(q.answers)?q.answers:[]).slice(0,200).map(x=>({text:S(x&&x.text,10000),who:S(x&&x.who,100),role:S(x&&x.role,100),date:S(x&&x.date,20),src:S(x&&x.src,50),note:S(x&&x.note,2000)}))}))}
 const keep=()=>{try{localStorage.setItem("tea-q-v1",JSON.stringify(D))}catch(e){}};
-let tm;const save=()=>{keep();if(getEP()){clearTimeout(tm);tm=setTimeout(()=>pushSheet(true),1500)}};
+let tm;const save=()=>{keep();if(synced()){clearTimeout(tm);tm=setTimeout(()=>pushSheet(true),1500)}};
 function fixup(){if(!Array.isArray(D.tags))D.tags=TAGS0.slice();if(!D.tags.includes("商品"))D.tags.push("商品");D.tags=D.tags.filter(t=>!["和紅茶","中国茶","台湾茶"].includes(t));if(!D.tags.includes("海外茶"))D.tags.push("海外茶");(D.qs||(D.qs=[])).forEach(q=>{q.answers=q.answers||[];q.tags=[...new Set((q.tags||[]).map(t=>t=="中国茶"||t=="台湾茶"?"海外茶":t).filter(t=>t!="和紅茶"))];q.answers.forEach(a=>{if(a.src=="教書")a.src="書籍"})})}
 const msg=t=>{const e=document.querySelector("#sm");if(e)e.textContent=t};
-async function fetchRemote(){const ep=getEP();if(!ep)return null;const r=await fetch(ep);if(!r.ok)throw new Error("HTTP "+r.status);const t=await r.text();let d;try{d=JSON.parse(t)}catch(e){throw new Error("JSONではありません: "+t.slice(0,80))}if(!Array.isArray(d))throw new Error("想定外の形式のデータでした");return d}
-async function pushSheet(silent){if(!getEP())return;try{await fetch(getEP(),{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(D.qs)});if(!silent)msg("スプレッドシートに送信しました")}catch(e){if(!silent)msg("送信に失敗しました(オフラインの可能性があります)")}}
+async function api(b){const r=await fetch(getEP(),{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({token:getTok(),...b})});if(!r.ok)throw new Error("HTTP "+r.status);let d;try{d=await r.json()}catch(e){throw new Error("応答を読み取れません(URLが正しいか確認してください)")}
+ if(!d.ok)throw new Error(d.error=="unauthorized"?"合言葉が違います":d.error=="locked"?"失敗が続いたため、約10分ロックされています":"サーバーでエラーが発生しました");return d}
+async function fetchRemote(){if(!synced())return null;const d=await api({action:"get"});if(!Array.isArray(d.data))throw new Error("想定外の形式のデータでした");return d.data}
+async function pushSheet(silent){if(!synced())return;try{await api({action:"push",data:D.qs});if(!silent)msg("スプレッドシートに送信しました")}catch(e){if(!silent)msg("送信に失敗しました:"+e.message)}}
 async function refreshRC(){const el=$("#rc");if(!el)return;try{const r=await fetchRemote();if($("#rc"))el.textContent=r.length+"件"}catch(e){if($("#rc"))el.textContent="取得できませんでした("+e.message+")"}}
 async function doPull(){let r;try{r=await fetchRemote()}catch(e){msg("取得できませんでした:"+e.message);return}
  if(!confirm(`この端末の質問(${D.qs.length}件)を、スプレッドシートの質問(${r.length}件)で置き換えます。よろしいですか?`))return;
- D.qs=r;r.forEach(q=>(q.tags||[]).forEach(t=>{if(!D.tags.includes(t))D.tags.push(t)}));fixup();keep();go("home")}
+ D.qs=clean(r);D.qs.forEach(q=>q.tags.forEach(t=>{if(!D.tags.includes(t))D.tags.push(t)}));fixup();keep();go("home")}
 async function doPush(){let n="確認できませんでした";try{n=(await fetchRemote()).length+"件"}catch(e){}
  if(!confirm(`スプレッドシートの質問(${n})を、この端末の質問(${D.qs.length}件)で置き換えます。よろしいですか?`))return;
  await pushSheet(false);refreshRC()}
-function setupEP(){dlg(`<h2 style="font-size:17px">同期するURL</h2><div class="meta">Google Apps ScriptのウェブアプリURLを貼り付けてください。</div><input id="su" value="${E(getEP())}"><div class="row"><button class="go" style="padding:8px 16px" onclick="const v=$('#su').value.trim();if(v){setEP(v);closeD();render()}">設定する</button><button class="ib" onclick="closeD()">やめる</button></div>`)}
-function clearEP(){if(confirm("同期を解除しますか?(スプレッドシート上のデータは消えません)")){setEP("");render()}}
-function syncPage(){const ep=getEP();return `<header><button class="ib" onclick="go('home')">戻る</button><h1 style="font-size:19px">スプレッドシートと同期</h1></header>`+(ep?`<div class="meta" style="word-break:break-all">設定中のURL:${E(ep)}</div><div class="lbl">この端末の質問</div>${D.qs.length}件<div class="lbl">スプレッドシートの質問</div><span id="rc">確認中…</span><div class="row"><button class="ib" onclick="doPull()">スプレッドシート→この端末に取得</button></div><div class="meta">この端末の内容が、スプレッドシートの内容で置き換わります。</div><div class="row"><button class="ib" onclick="doPush()">この端末→スプレッドシートに送信</button></div><div class="meta">スプレッドシートの内容が、この端末の内容で置き換わります。</div><div class="row"><button class="ib" onclick="setupEP()">URLを変更する</button><button class="ib" onclick="clearEP()">同期を解除する</button></div>`:`<div class="meta">Google Apps ScriptのウェブアプリURLを設定すると、質問と回答をスプレッドシートと同期できます。</div><div class="row"><button class="go" style="padding:8px 16px" onclick="setupEP()">URLを設定する</button></div>`)+`<div class="meta" id="sm" style="margin-top:10px"></div>`}
+function setupEP(){dlg(`<h2 style="font-size:17px">同期の設定</h2><div class="lbl">ウェブアプリURL</div><input id="su" value="${E(getEP())}" autocomplete="off"><div class="lbl">合言葉</div><input id="sk" type="password" placeholder="${getTok()?"設定済み(変更するときだけ入力)":"setupで表示された合言葉"}" autocomplete="off"><div class="meta" style="margin-top:6px">合言葉はこの端末にだけ保存され、GitHubには置かれません。</div><div class="row"><button class="go" style="padding:8px 16px" onclick="const u=$('#su').value.trim(),k=$('#sk').value.trim();if(u&&!u.startsWith('https://script.google.com/')){alert('script.google.com のURLを入力してください');return}if(u)setEP(u);if(k)setTok(k);closeD();render()">設定する</button><button class="ib" onclick="closeD()">やめる</button></div>`)}
+function clearEP(){if(confirm("同期を解除しますか?この端末のURLと合言葉を削除します(スプレッドシート上のデータは消えません)")){setEP("");setTok("");render()}}
+function syncPage(){const ok=synced(),ep=getEP();return `<header><button class="ib" onclick="go('home')">戻る</button><h1 style="font-size:19px">スプレッドシートと同期</h1></header>`+(ok?`<div class="meta" style="word-break:break-all">設定中のURL:${E(ep)}</div><div class="lbl">合言葉</div>設定済み<div class="lbl">この端末の質問</div>${D.qs.length}件<div class="lbl">スプレッドシートの質問</div><span id="rc">確認中…</span><div class="row"><button class="ib" onclick="doPull()">スプレッドシート→この端末に取得</button></div><div class="meta">この端末の内容が、スプレッドシートの内容で置き換わります。</div><div class="row"><button class="ib" onclick="doPush()">この端末→スプレッドシートに送信</button></div><div class="meta">スプレッドシートの内容が、この端末の内容で置き換わります。</div><div class="row"><button class="ib" onclick="setupEP()">URL・合言葉を変更する</button><button class="ib" onclick="clearEP()">同期を解除する</button></div>`:`<div class="meta">${ep&&!getTok()?"合言葉が未設定です。":""}Google Apps ScriptのURLと合言葉を設定すると、質問と回答をスプレッドシートと同期できます。</div><div class="row"><button class="go" style="padding:8px 16px" onclick="setupEP()">URLと合言葉を設定する</button></div>`)+`<div class="meta" id="sm" style="margin-top:10px"></div>`}
 let V={page:"home",id:null,q:"",sort:"new",st:"",tag:""};
 const $=s=>document.querySelector(s),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const E=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
